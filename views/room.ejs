@@ -26,7 +26,7 @@
             </nav>
         </div>
     </main>
-
+    
     <div id="guest-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>Enter Your Name</h2>
@@ -65,6 +65,7 @@
         const sessionName = "<%= name %>";
         let myPeer, myStream, myDisplayName;
 
+        // --- Get all HTML elements ---
         const callInterface = document.getElementById('call-interface');
         const infoHeader = document.querySelector('.info-header');
         const lobby = document.getElementById('lobby');
@@ -75,6 +76,7 @@
         const copyBtn = document.getElementById('copy-link-btn');
         const peers = {};
 
+        // --- Event Listeners ---
         copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(roomLink).then(() => {
                 const btnText = copyBtn.querySelector('span');
@@ -97,6 +99,7 @@
             window.location.href = '/';
         });
 
+        // --- Main Functions ---
         function initialize() {
             lobby.style.display = 'flex';
             navigator.mediaDevices.getUserMedia({ video: false, audio: true })
@@ -106,10 +109,32 @@
                     myAudio.srcObject = stream;
                     myAudio.muted = true;
                     audioContainer.appendChild(myAudio);
-                    myPeer = new Peer(undefined, { host: '/', path: '/peerjs', port: location.protocol === 'https:' ? 443 : 80 });
+
+                    // ***** THIS IS THE CORRECT CONFIGURATION *****
+                    const iceServers = [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        {
+                            urls: 'turn:relay1.expressturn.com:3480',
+                            username: '000000002068136224',
+                            credential: 'DioiUB9cMU6ubDOuJInWx5cz5o4='
+                        }
+                    ];
+
+                    myPeer = new Peer(undefined, {
+                        host: '/',
+                        path: '/peerjs',
+                        port: location.protocol === 'https:' ? 443 : 80,
+                        config: {
+                            'iceServers': iceServers
+                        }
+                    });
+                    // ***********************************************
+
                     myPeer.on('open', peerID => {
                         socket.emit("join-room", roomID, peerID, myDisplayName);
                     });
+
                     myPeer.on('call', call => {
                         call.answer(myStream);
                         const displayName = call.metadata.displayName;
@@ -129,7 +154,8 @@
                     alert("Could not access microphone.");
                 });
         }
-
+        
+        // --- Socket Event Handlers ---
         socket.on('room-full', () => {
             alert("This room is full.");
             window.location.href = '/';
@@ -146,10 +172,11 @@
             }
             removeRemoteUser(peerID);
         });
-
+        
+        // --- UI Update Functions ---
         function startCallUI() {
             lobby.style.display = 'none';
-            callInterface.style.display = 'block'; // Changed to block to fill the wrapper
+            callInterface.style.display = 'flex';
             if (infoHeader) {
                 infoHeader.style.height = '0';
                 infoHeader.style.padding = '0';
@@ -186,7 +213,7 @@
             const textEl = document.getElementById('redirect-text');
             let countdown = 5;
             function updateMessage() {
-                textEl.innerText = `${message}\nRedirecting to homepage in ${countdown}...`;
+                textEl.innerText = `${message}\nRedirecting in ${countdown}...`;
                 countdown--;
                 if (countdown < 0) {
                     window.location.href = '/';
@@ -198,6 +225,7 @@
             updateMessage();
         }
 
+        // --- Entry Logic ---
         if (isLoggedIn) {
             myDisplayName = sessionName;
             initialize();
