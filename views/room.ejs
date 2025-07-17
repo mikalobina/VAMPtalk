@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Room | VAMPtalk</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <main class="main-content-wrapper">
+        <div id="call-interface" class="room-container" style="display: none;">
+             <header class="info-header">
+                <p>Room ID: <strong><%= roomID %></strong></p>
+            </header>
+            <div class="remote-user-display">
+                <div class="avatar">
+                    <i class="material-icons">person</i>
+                </div>
+                <p id="remote-user-name"></p>
+            </div>
+            <div id="audio-container" style="display: none;"></div>
+            <nav class="controls">
+                <button id="mute-btn" class="control-btn" title="Mute"><i class="material-icons">mic</i></button>
+                <button id="end-call-btn" class="control-btn end-call" title="End Call"><i class="material-icons">call_end</i></button>
+            </nav>
+        </div>
+    </main>
+
+    <div id="guest-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Enter Your Name</h2>
+            <p style="margin-bottom: 1rem;">Please enter your name to join the call as a guest.</p>
+            <div class="input-wrapper" style="margin-bottom: 0;">
+                <input type="text" id="guest-name-input" placeholder="Your Name" required>
+            </div>
+            <button id="join-as-guest-btn">Join Call</button>
+        </div>
+    </div>
+    <div id="lobby" class="modal-overlay">
+        <div class="modal-content">
+            <p class="lobby-message">Waiting for another person to join...</p>
+            <div class="spinner"></div>
+            <button id="copy-link-btn" class="button">
+                <i class="material-icons">content_copy</i>
+                <span>Copy Invite Link</span>
+            </button>
+        </div>
+    </div>
+    <div id="redirect-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <p id="redirect-text" class="redirect-message"></p>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        const roomLink = "<%= appUrl %>/room/<%= roomID %>";
+        const socket = io("/");
+        const roomID = "<%= roomID %>";
+        const isLoggedIn = "<%= isLoggedIn %>" === "true";
+        const sessionName = "<%= name %>";
+        let myPeer, myStream, myDisplayName;
+
+        const callInterface = document.getElementById('call-interface');
+        const infoHeader = document.querySelector('.info-header');
+        const lobby = document.getElementById('lobby');
+        const audioContainer = document.getElementById('audio-container');
+        const remoteUserNameEl = document.getElementById('remote-user-name');
+        const muteBtn = document.getElementById('mute-btn');
+        const endCallBtn = document.getElementById('end-call-btn');
+        const copyBtn = document.getElementById('copy-link-btn');
+        const peers = {};
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(roomLink).then(() => {
+                const btnText = copyBtn.querySelector('span');
+                btnText.innerText = 'Copied!';
+                setTimeout(() => { btnText.innerText = 'Copy Invite Link'; }, 2000);
+            });
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (!myStream) return;
+            const isEnabled = myStream.getAudioTracks()[0].enabled;
+            myStream.getAudioTracks()[0].enabled = !isEnabled;
+            muteBtn.innerHTML = `<i class="material-icons">${isEnabled ? 'mic_off' : 'mic'}</i>`;
+            muteBtn.classList.toggle('active', !isEnabled);
+        });
+
+        endCallBtn.addEventListener('click', () => {
+            if (myPeer) myPeer.destroy();
+            socket.disconnect();
+            window.location.href = '/';
+        });
+
+        function initialize() {
+            lobby.style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+                .then(stream => {
+                    myStream = stream;
+                    const myAudio = document.createElement('audio');
+                    myAudio.srcObject = stream;
+                    myAudio.muted = true;
+                    audioContainer.appendChild(myAudio);
+                    myPeer = new Peer(undefined, { host: '/', path: '/peerjs', port: location.protocol === 'https:' ? 443 : 80 });
+                    myPeer.on('open', peerID => {
+                        socket.emit("join-room", roomID, peerID, myDisplayName);
+                    });
+                    myPeer.on('call', call => {
+                        call.answer(myStream);
+                        const displayName = call.metadata.displayName;
+                        updateRemoteUserDisplay(displayName, call.peer);
+                        call.on('stream', userAudioStream => {
+                            startCallUI();
+                            const audio = document.createElement('audio');
+                            audio.srcObject = userAudioStream;
+                            audio.id = `audio-${call.peer}`;
+                            audio.play().catch(e => console.error("Audio play failed:", e));
+                            audioContainer.appendChild(audio);
+                        });
+                        call.on('close', () => removeRemoteUser(call.peer));
+                        peers[call.peer] = call;
+                    });
+                }).catch(err => {
+                    alert("Could not access microphone.");
+                });
+        }
+
+        socket.on('room-full', () => {
+            alert("This room is full.");
+            window.location.href = '/';
+        });
+        socket.on('user-connected', (peerID, displayName) => {
+            startCallUI();
+            connectToNewUser(peerID, displayName, myStream);
+        });
+        socket.on('user-disconnected', (peerID, displayName) => {
+            showRedirectMessage(`${displayName || 'The other user'} has left the room.`);
+            if (peers[peerID]) {
+                peers[peerID].close();
+                delete peers[peerID];
+            }
+            removeRemoteUser(peerID);
+        });
+
+        function startCallUI() {
+            lobby.style.display = 'none';
+            callInterface.style.display = 'block'; // Changed to block to fill the wrapper
+            if (infoHeader) {
+                infoHeader.style.height = '0';
+                infoHeader.style.padding = '0';
+                infoHeader.style.opacity = '0';
+                infoHeader.style.overflow = 'hidden';
+            }
+        }
+        function connectToNewUser(peerID, displayName, stream) {
+            const call = myPeer.call(peerID, stream, { metadata: { displayName: myDisplayName }});
+            updateRemoteUserDisplay(displayName, peerID);
+            call.on('stream', userAudioStream => {
+                const audio = document.createElement('audio');
+                audio.srcObject = userAudioStream;
+                audio.id = `audio-${peerID}`;
+                audio.play().catch(e => console.error("Audio play failed:", e));
+                audioContainer.appendChild(audio);
+            });
+            call.on('close', () => removeRemoteUser(peerID));
+            peers[peerID] = call;
+        }
+        function updateRemoteUserDisplay(name, peerID) {
+            remoteUserNameEl.innerText = name || 'Connected User';
+            remoteUserNameEl.dataset.peerId = peerID;
+        }
+        function removeRemoteUser(peerID) {
+            const audioEl = document.getElementById(`audio-${peerID}`);
+            if (audioEl) audioEl.remove();
+            if (remoteUserNameEl.dataset.peerId === peerID) {
+                remoteUserNameEl.innerText = '';
+            }
+        }
+        function showRedirectMessage(message) {
+            const overlay = document.getElementById('redirect-overlay');
+            const textEl = document.getElementById('redirect-text');
+            let countdown = 5;
+            function updateMessage() {
+                textEl.innerText = `${message}\nRedirecting to homepage in ${countdown}...`;
+                countdown--;
+                if (countdown < 0) {
+                    window.location.href = '/';
+                } else {
+                    setTimeout(updateMessage, 1000);
+                }
+            }
+            overlay.style.display = 'flex';
+            updateMessage();
+        }
+
+        if (isLoggedIn) {
+            myDisplayName = sessionName;
+            initialize();
+        } else {
+            const modal = document.getElementById('guest-modal');
+            modal.style.display = 'flex';
+            document.getElementById('join-as-guest-btn').onclick = () => {
+                const guestName = document.getElementById('guest-name-input').value;
+                if (guestName.trim()) {
+                    myDisplayName = guestName;
+                    modal.style.display = 'none';
+                    initialize();
+                } else {
+                    alert("Please enter your name.");
+                }
+            };
+        }
+    </script>
+</body>
+</html>

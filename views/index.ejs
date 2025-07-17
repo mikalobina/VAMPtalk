@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | VAMPtalk</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <main class="main-content-wrapper dashboard-wrapper">
+        <div class="container">
+            <h2>Welcome to VAMPtalk, <%= name %>!</h2>
+            <p>Ready to start a conversation?</p>
+            <a href="/create-room" class="button">Create a New Voice Room</a>
+            <a href="/logout" class="logout-link">Logout</a>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

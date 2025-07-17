@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+/* CSS Variables for a Refined Dark Theme */
+:root {
+    --bg-color: #121212;
+    --card-bg-color: #1E1E1E;
+    --primary-text-color: #EAEAEA;
+    --secondary-text-color: #A0A0A0;
+    --accent-color: #BB86FC;
+    --accent-hover-color: #A166E4;
+    --error-color: #CF6679;
+    --border-color: #333333;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+html {
+    box-sizing: border-box;
+    height: 100%;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--primary-text-color);
+    margin: 0;
+
+    /* New Flexbox layout for the entire page */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* Prevents all scrolling */
+}
+
+/* A general wrapper for content that grows to fill space */
+.main-content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Fix for flexbox overflow */
+}
+
+/* Forms & Dashboard Container */
+.form-wrapper, .dashboard-wrapper {
+    justify-content: center;
+    align-items: center;
+}
+
+.form-container, .container {
+    background: var(--card-bg-color);
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px -10px var(--shadow-color);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+h2 { margin-top: 0; margin-bottom: 0.5rem; font-weight: 700; }
+.form-container p { color: var(--secondary-text-color); margin-bottom: 2rem; }
+.input-wrapper { position: relative; margin-bottom: 1rem; }
+.input-wrapper input { width: 100%; padding: 14px 45px 14px 14px; border: 1px solid var(--border-color); background-color: #2C2C2C; color: var(--primary-text-color); border-radius: 8px; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; }
+.input-wrapper input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(187, 134, 252, 0.2); }
+.password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: var(--secondary-text-color); user-select: none; }
+button, .button { background: var(--accent-color); color: #121212; padding: 14px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; text-decoration: none; display: inline-block; width: 100%; margin-top: 1rem; transition: background-color 0.2s, transform 0.2s; }
+button:hover, .button:hover { background-color: var(--accent-hover-color); transform: translateY(-2px); }
+a { color: var(--accent-color); text-decoration: none; margin-top: 1.5rem; display: inline-block; font-weight: 500; }
+.error { color: var(--error-color); margin-top: 1rem; }
+
+/* Footer (No longer fixed) */
+.credit-footer {
+    flex-shrink: 0; /* Ensures footer doesn't shrink */
+    text-align: center;
+    padding: 12px 0;
+    background-color: var(--card-bg-color);
+    font-size: 0.9rem;
+    color: var(--secondary-text-color);
+    border-top: 1px solid var(--border-color);
+    width: 100%;
+}
+.credit-footer a { margin: 0; color: var(--accent-color); font-weight: 500; }
+
+/* Room Styles - Adapted to the new layout */
+.room-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    min-height: 0;
+}
+
+.info-header { flex-shrink: 0; padding-bottom: 1rem; text-align: center; color: var(--secondary-text-color); font-size: 0.9rem; transition: all 0.3s ease; }
+.remote-user-display { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 0; }
+.avatar { width: 100px; height: 100px; border-radius: 50%; background: #2C2C2C; display: flex; justify-content: center; align-items: center; margin-bottom: 1.5rem; }
+.avatar .material-icons { font-size: 50px; color: var(--secondary-text-color); }
+#remote-user-name { font-size: 2.5rem; font-weight: 700; }
+.controls { flex-shrink: 0; padding: 1rem 0; display: flex; justify-content: center; align-items: center; gap: 3rem; }
+.control-btn { background: var(--card-bg-color); color: var(--primary-text-color); border: 1px solid var(--border-color); border-radius: 50%; width: 64px; height: 64px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px -3px var(--shadow-color); }
+.control-btn:hover { transform: translateY(-3px); }
+.control-btn.end-call { background-color: var(--error-color); color: white; border: none; }
+.control-btn.active { background-color: var(--accent-color); color: #121212; border-color: var(--accent-color); }
+
+/* Modals and Overlays */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(8px); padding: 1rem; }
+.modal-content { background: var(--card-bg-color); padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 30px -10px var(--shadow-color); text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--border-color); }
+.lobby-message, .redirect-message { font-size: 1.2rem; color: var(--secondary-text-color); }
+.lobby-message .spinner { border: 4px solid var(--border-color); border-left-color: var(--accent-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#copy-link-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; margin-top: 1.5rem; }
